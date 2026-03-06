@@ -9,17 +9,17 @@
 - **Unsafe**: Использование сырых указателей (*const u8) и ручное управление итерацией для обхода проверок границ (bounds checks).
 - **SIMD-подобные сравнения**: Чтение и сравнение 4 или 2 байтов за один раз через read_unaligned с применением битовых масок для регистронезависимости.
 
-## Поддерживаемые форматы
+## Поддерживаемые форматы (LinkKind)
 
 | Формат | Результат |
 | :--- | :--- |
 | @username | Username("username") |
-| @123456 | Id(123456) |
-| t.me/username | Username("username") |
-| t.me/@id12345 | Id(12345) |
-| tg://resolve?domain=juzo_otvetit | Username("juzo_otvetit") |
-| tg://user?id=12345 | Id(12345) |
-| tg://oppenmessage?user_id=12345 | Id(12345) |
+| @123456 | LinkKind::Id(123456) |
+| t.me/username | LinkKind::Username("username") |
+| t.me/@id12345 | LinkKind::Id(12345) |
+| tg://resolve?domain=juzo_otvetit | LinkKind::Username("juzo_otvetit") |
+| tg://user?id=12345 | LinkKind::Id(12345) |
+| tg://openmessage?user_id=12345 | LinkKind::Id(12345) |
 
 ## Пример использования
 
