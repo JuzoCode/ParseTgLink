@@ -1,11 +1,7 @@
 # ParseTgLink
 
-![Language (https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-![License (https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Performance (https://img.shields.io/badge/performance-O(n)-brightgreen.svg)]()
-
 `ParseTgLink` - это высокопроизводительный, **Zero-Copy access** парсер ссылок Telegram для замены `Regex` на языке Rust.
-- *Был создан по принципам (TelegramUserLinkParser)[https://github.com/Puxxalwl/TelegramUserLinkParser]*
+- *Был создан по принципам [TelegramUserLinkParser](https://github.com/Puxxalwl/TelegramUserLinkParser)*
 
 ## Особенности:
 - **No std**: Полная поддержка no_std.
