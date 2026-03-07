@@ -80,7 +80,7 @@ impl<'a> ParseTgLink<'a> {
         // "reso"
         if ((s as *const u32).read_unaligned() | 0x20202020) != 0x6F736572 { return false }
         // "lve?"
-        if ((s.add(4) as *const u32).read_unaligned() | 0x20202000) != 0x3F65766C { return false }
+        if ((s.add(4) as *const u32).read_unaligned() | 0x20202020) != 0x3F65766C { return false }
         // "doma"
         if ((s.add(8) as *const u32).read_unaligned() | 0x20202020) != 0x616D6F64 { return false }
         // "in="
@@ -102,9 +102,9 @@ impl<'a> ParseTgLink<'a> {
     unsafe fn is_open_message(&self, s: *const u8) -> bool {
         if ((s as *const u32).read_unaligned() | 0x20202020) != 0x6E65706F { return false }         // "open"
         if ((s.add(4) as *const u32).read_unaligned() | 0x20202020) != 0x7373656D { return false }  // "mess"
-        if ((s.add(8) as *const u32).read_unaligned() | 0x20202000) != 0x3F656761 { return false }  // "age?"
+        if ((s.add(8) as *const u32).read_unaligned() | 0x00202020) != 0x3F656761 { return false }  // "age?"
         if ((s.add(12) as *const u32).read_unaligned() | 0x20202020) != 0x72657375 { return false } // "user"
-        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64697F { return false } // "_id="
+        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64697F { println!("ksksk3"); return false } // "_id="
         true
     }
 
@@ -113,7 +113,7 @@ impl<'a> ParseTgLink<'a> {
     unsafe fn t_me(&mut self, s: *const u8) -> Option<LinkKind<'a>> {
         // RU:  Проверка "t.me/"
         // ENG: Verification "t.me/"
-        if ((s as *const u32).read_unaligned() | 0x20002020) != 0x656D2E74 && *s.add(5) != b'/' { return None }
+        if ((s as *const u32).read_unaligned() | 0x20200020) != 0x656D2E74 && *s.add(5) != b'/' { return None }
 
         let sub_ptr = s.add(5);
         let sub_len = self.end as usize - sub_ptr as usize;
@@ -124,7 +124,7 @@ impl<'a> ParseTgLink<'a> {
             0x60 => {
                 let id_ptr = sub_ptr.add(1);
                 // "id"
-                if sub_len >= 3 && (id_ptr as *const u16).read_unaligned() == 0x6469 {
+                if sub_len >= 3 && ((id_ptr as *const u16).read_unaligned() | 0x2020) == 0x6469 {
                     let (v, n) = self.num(id_ptr.add(2))?;
                     self.ptr = n;
                     return Some(LinkKind::Id(v))
@@ -171,7 +171,6 @@ impl<'a> ParseTgLink<'a> {
             _ => None
         }
     }
-
 }
 
 /// Вспомогательная функция для быстрого поиска символов @, t, T
