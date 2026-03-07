@@ -104,7 +104,7 @@ impl<'a> ParseTgLink<'a> {
         if ((s.add(4) as *const u32).read_unaligned() | 0x20202020) != 0x7373656D { return false }  // "mess"
         if ((s.add(8) as *const u32).read_unaligned() | 0x00202020) != 0x3F656761 { return false }  // "age?"
         if ((s.add(12) as *const u32).read_unaligned() | 0x20202020) != 0x72657375 { return false } // "user"
-        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64697F { println!("ksksk3"); return false } // "_id="
+        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64697F { return false } // "_id="
         true
     }
 
