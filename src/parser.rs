@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 use core::slice::from_raw_parts;
 use core::str::from_utf8_unchecked;
 
@@ -13,19 +13,22 @@ pub enum LinkKind<'a> {
 pub struct ParseTgLink<'a> {
     ptr: *const u8,
     end: *const u8,
+
+    // RU:  Параметр для работы с Lifetime-bound references. (Zero-Sized)
+    // ENG: Parameter for working with Lifetime-bound references. (Zero-Sized)
     _marker: PhantomData<&'a [u8]>,
 }
 
 impl<'a> ParseTgLink<'a> {
-    // RU:  Быстрый метод для получения первой найденной ссылки. (1 link)
-    // ENG: Quick method to retrieve the first found link. (1 link)
+    // RU:  Быстрый метод для получения первой найденной ссылки. (one link)
+    // ENG: Quick method to retrieve the first found link. (one link)
     #[inline(always)]
     pub fn new(text: &'a str) -> Option<LinkKind<'a>> {
         Self::all(text).next()
     }
 
-    // RU:  Быстрый метод для получения первой найденной ссылки. (all link)
-    // ENG: Quick method to retrieve the first found link. (all link)
+    // RU:  Быстрый метод для получения всех найденных ссылок. (all link)
+    // ENG: A quick method for getting all found links. (all link)
     #[inline(always)]
     pub fn all(text: &'a str) -> Self {
         let b = text.as_bytes();
@@ -101,7 +104,7 @@ impl<'a> ParseTgLink<'a> {
         if ((s.add(4) as *const u32).read_unaligned() | 0x20202020) != 0x7373656D { return false }  // "mess"
         if ((s.add(8) as *const u32).read_unaligned() | 0x20202000) != 0x3F656761 { return false }  // "age?"
         if ((s.add(12) as *const u32).read_unaligned() | 0x20202020) != 0x72657375 { return false } // "user"
-        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64695F { return false } // "_id="
+        if ((s.add(16) as *const u32).read_unaligned() | 0x20202020) != 0x3D64697F { return false } // "_id="
         true
     }
 
@@ -161,6 +164,7 @@ impl<'a> ParseTgLink<'a> {
                 Some(LinkKind::Username(u))
             }
             b'o' if sub_len >= 20 && self.is_open_message(sub_ptr) => {
+                println!("lsls");
                 let (v, n) = self.num(sub_ptr.add(20))?;
                 self.ptr = n;
                 Some(LinkKind::Id(v))
