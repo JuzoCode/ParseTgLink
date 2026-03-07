@@ -164,7 +164,6 @@ impl<'a> ParseTgLink<'a> {
                 Some(LinkKind::Username(u))
             }
             b'o' if sub_len >= 20 && self.is_open_message(sub_ptr) => {
-                println!("lsls");
                 let (v, n) = self.num(sub_ptr.add(20))?;
                 self.ptr = n;
                 Some(LinkKind::Id(v))
