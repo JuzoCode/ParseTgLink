@@ -50,7 +50,7 @@ impl<'a> ParseTgLink<'a> {
 
         while s < self.end {
             let b = *s;
-            if b < b'0' || b > b'9' { break }
+            if !b.is_ascii_digit() { break }
             v = v.wrapping_mul(10).wrapping_add((b - b'0') as u64);
             s = s.add(1);
         }
