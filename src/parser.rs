@@ -16,7 +16,7 @@ pub struct ParseTgLink<'a> {
 
     // RU:  Параметр для работы с Lifetime-bound references. (Zero-Sized)
     // ENG: Parameter for working with Lifetime-bound references. (Zero-Sized)
-    _marker: PhantomData<&'a [u8]>,
+    __marker: PhantomData<&'a [u8]>,
 }
 
 impl<'a> ParseTgLink<'a> {
@@ -36,7 +36,7 @@ impl<'a> ParseTgLink<'a> {
         Self {
             ptr: s,
             end: unsafe { s.add(b.len()) },
-            _marker: PhantomData,
+            __marker: PhantomData,
         }
     }
 
@@ -142,7 +142,6 @@ impl<'a> ParseTgLink<'a> {
     }
 
     #[inline(always)]
-    #[allow(dead_code)]
     unsafe fn tg_protocol(&mut self, s: *const u8) -> Option<LinkKind<'a>> {
         // RU:  Проверка "tg://"
         // ENG: Verification "tg://"
