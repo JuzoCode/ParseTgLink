@@ -15,6 +15,7 @@
 | :--- | :--- |
 | @username | LinkKind::Username("username") |
 | @123456 | LinkKind::Id(123456) |
+| t.me/12345 | LinkKind::Id(12345) |
 | t.me/username | LinkKind::Username("username") |
 | t.me/@id12345 | LinkKind::Id(12345) |
 | tg://resolve?domain=juzo_otvetit | LinkKind::Username("juzo_otvetit") |
