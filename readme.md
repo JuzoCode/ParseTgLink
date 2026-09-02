@@ -15,9 +15,16 @@
 | :--- | :--- |
 | @username | LinkKind::Username("username") |
 | @123456 | LinkKind::Id(123456) |
+| @_123456 | LinkKind::ChatId(-123456) |
 | t.me/12345 | LinkKind::Id(12345) |
 | t.me/username | LinkKind::Username("username") |
 | t.me/@id12345 | LinkKind::Id(12345) |
+| telegram.me/12345 | LinkKind::Id(12345) |
+| telegram.me/username | LinkKind::Username("username") |
+| telegram.me/@id12345 | LinkKind::Id(12345) |
+| telegram.dog/12345 | LinkKind::Id(12345) |
+| telegram.dog/username | LinkKind::Username("username") |
+| telegram.dog/@id12345 | LinkKind::Id(12345) |
 | tg://resolve?domain=juzo_otvetit | LinkKind::Username("juzo_otvetit") |
 | tg://user?id=12345 | LinkKind::Id(12345) |
 | tg://openmessage?user_id=12345 | LinkKind::Id(12345) |
@@ -35,8 +42,8 @@ fn main() {
     for link in ParseTgLink::all(text) {
         match link {
             LinkKind::Username(username) => println!("Username found (all): {username}"),
-            LinkKind::Id(id) => println!("ID found (all): {id}"),
-            _ => {}
+            LinkKind::ChatId(id) => println!("ChatId found (all): {id}"),
+            LinkKind::Id(id) => println!("Id found (all): {id}"),
         }
     }
 
