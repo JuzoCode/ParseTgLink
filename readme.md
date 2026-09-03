@@ -17,25 +17,25 @@
 | @12345 | LinkKind::Id(12345) |
 | @_12345 | LinkKind::ChatId(-12345) |
 | @-12345 | LinkKind::ChatId(-12345) |
-
+| :--- | :--- |
 | t.me/username | LinkKind::Username("username") |
 | t.me/12345 | LinkKind::Id(12345) |
 | t.me/_12345 | LinkKind::ChatId(-12345) |
 | t.me/-12345 | LinkKind::ChatId(-12345) |
 | t.me/@id12345 | LinkKind::Id(12345) |
-
+| :--- | :--- |
 | telegram.me/username | LinkKind::Username("username") |
 | telegram.me/12345 | LinkKind::Id(12345) |
 | telegram.me/_12345 | LinkKind::ChatId(12345) |
 | telegram.me/-12345 | LinkKind::ChatId(12345) |
 | telegram.me/@id12345 | LinkKind::Id(12345) |
-
+| :--- | :--- |
 | telegram.dog/username | LinkKind::Username("username") |
 | telegram.dog/12345 | LinkKind::Id(12345) |
 | telegram.dog/_12345 | LinkKind::ChatId(-12345) |
 | telegram.dog/-12345 | LinkKind::ChatId(-12345) |
 | telegram.dog/@id12345 | LinkKind::Id(12345) |
-
+| :--- | :--- |
 | tg://resolve?domain=juzo_otvetit | LinkKind::Username("juzo_otvetit") |
 | tg://user?id=12345 | LinkKind::Id(12345) |
 | tg://openmessage?user_id=12345 | LinkKind::Id(12345) |
