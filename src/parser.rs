@@ -30,6 +30,7 @@ impl<'a> ParseTgLink<'a> {
     pub const fn all(text: &'a str) -> Self {
         let b = text.as_bytes();
         let s = b.as_ptr();
+
         Self {
             ptr: s,
             end: unsafe { s.add(b.len()) },
@@ -43,7 +44,7 @@ impl<'a> ParseTgLink<'a> {
             return None;
         }
 
-        let mut v = (*s - b'0') as u64;
+        let mut v = (*s - 0x30) as u64;
         s = s.add(1);
 
         while s < self.end {
@@ -51,9 +52,11 @@ impl<'a> ParseTgLink<'a> {
             if !b.is_ascii_digit() {
                 break;
             }
+
             v = v
                 .wrapping_mul(10)
-                .wrapping_add((b - b'0') as u64);
+                .wrapping_add((b - 0x30) as u64);
+
             s = s.add(1);
         }
 
@@ -66,7 +69,7 @@ impl<'a> ParseTgLink<'a> {
             return None;
         }
 
-        let mut v = (*s - b'0') as i64;
+        let mut v = (*s - 0x30) as i64;
         s = s.add(1);
 
         while s < self.end {
@@ -75,7 +78,7 @@ impl<'a> ParseTgLink<'a> {
                 break;
             }
 
-            let digit = (b - b'0') as i64;
+            let digit = (b - 0x30) as i64;
 
             if v > i64::MAX / 10 || v == i64::MAX / 10 && digit > 7 {
                 return None;
@@ -91,8 +94,7 @@ impl<'a> ParseTgLink<'a> {
     #[inline]
     unsafe fn str(&self, s: *const u8) -> Option<(&'a str, *const u8)> {
         let first = *s | 0x20;
-
-        if first.wrapping_sub(b'a') > 25 {
+        if first.wrapping_sub(0x61) > 25 {
             return None;
         }
 
@@ -101,7 +103,7 @@ impl<'a> ParseTgLink<'a> {
         while c < self.end {
             let b = *c;
 
-            if (b | 0x20).wrapping_sub(b'a') <= 25 || b.wrapping_sub(b'0') <= 9 || b == b'_' {
+            if (b | 0x20).wrapping_sub(0x61) <= 25 || b.wrapping_sub(0x30) <= 9 || b == 0x5f {
                 c = c.add(1);
             } else {
                 break;
@@ -131,14 +133,14 @@ impl<'a> ParseTgLink<'a> {
         if ((s.add(12) as *const u16).read_unaligned() | 0x2020) != 0x6E69 {
             return false;
         }
-        *s.add(14) == b'='
+        *s.add(14) == 0x3d
     }
 
     // "user?id="
     #[inline]
     const unsafe fn is_tg_user(&self, s: *const u8) -> bool {
-        let v1 = (s as *const u32).read_unaligned() | 0x20202020; // "user"
-        let v2 = (s.add(4) as *const u32).read_unaligned(); // "?id="
+        let v1 = (s as *const u32).read_unaligned() | 0x20202020;
+        let v2 = (s.add(4) as *const u32).read_unaligned();
 
         v1 == 0x72657375 && (v2 | 0x00202000) == 0x3D64693F
     }
@@ -176,7 +178,8 @@ impl<'a> ParseTgLink<'a> {
         if (self.end as usize - s as usize) < 5 {
             return None;
         }
-        if ((s as *const u32).read_unaligned() | 0x20200020) != 0x656D2E74 && *s.add(5) != b'/' {
+
+        if ((s as *const u32).read_unaligned() | 0x20200020) != 0x656D2E74 && *s.add(5) != 0x2f {
             return None;
         }
 
@@ -195,16 +198,23 @@ impl<'a> ParseTgLink<'a> {
                     self.ptr = n;
                     return Some(LinkKind::Id(v));
                 }
+
                 None
             }
+            // "t.me/_{id}" / "t.me/-{id}"
+            0x7f | 0x2d => {
+                let (v, n) = self.chat_id(sub_ptr.add(1))?;
+                self.ptr = n;
+                Some(LinkKind::ChatId(v))
+            }
             // "t.me/{id}"
-            b'0'..=b'9' => {
+            0x30..=0x39 => {
                 let (u, n) = self.num(sub_ptr)?;
                 self.ptr = n;
                 Some(LinkKind::Id(u))
             }
             // "t.me/{username}"
-            b'a'..=b'z' => {
+            0x61..=0x7a => {
                 let (u, n) = self.str(sub_ptr)?;
                 self.ptr = n;
                 Some(LinkKind::Username(u))
@@ -216,7 +226,6 @@ impl<'a> ParseTgLink<'a> {
     #[inline]
     unsafe fn telegram_domain(&mut self, s: *const u8) -> Option<LinkKind<'a>> {
         let remain = self.end.offset_from(s) as usize;
-
         if remain < 13 {
             return None;
         }
@@ -237,9 +246,9 @@ impl<'a> ParseTgLink<'a> {
                 if remain < 14 {
                     return None;
                 }
+
                 13
             }
-
             _ => return None,
         };
 
@@ -250,7 +259,7 @@ impl<'a> ParseTgLink<'a> {
         }
 
         match *sub_ptr | 0x20 {
-            // "telegram.dog/@id{num}" / "telegram.me/@id{num}"
+            // ".dog/@id{num}" / ".me/@id{num}"
             0x60 => {
                 let id_ptr = sub_ptr.add(1);
                 if sub_len >= 3 && ((id_ptr as *const u16).read_unaligned() | 0x2020) == 0x6469 {
@@ -258,16 +267,23 @@ impl<'a> ParseTgLink<'a> {
                     self.ptr = n;
                     return Some(LinkKind::Id(v));
                 }
+
                 None
             }
+            // ".dog/_{id}" / ".me/-{id}"
+            0x7f | 0x2d => {
+                let (v, n) = self.chat_id(sub_ptr.add(1))?;
+                self.ptr = n;
+                Some(LinkKind::ChatId(v))
+            }
             // ".dog/{id}" / ".me/{id}"
-            b'0'..=b'9' => {
+            0x30..=0x39 => {
                 let (v, n) = self.num(sub_ptr)?;
                 self.ptr = n;
                 Some(LinkKind::Id(v))
             }
-            // ".dog/{username}" / ".me/{usermame}"
-            b'a'..=b'z' => {
+            // ".dog/{username}" / ".me/{username}"
+            0x61..=0x7a => {
                 let (u, n) = self.str(sub_ptr)?;
                 self.ptr = n;
                 Some(LinkKind::Username(u))
@@ -283,7 +299,8 @@ impl<'a> ParseTgLink<'a> {
         if (self.end as usize - s as usize) < 5 {
             return None;
         }
-        if ((s as *const u32).read_unaligned() | 0x00002020) != 0x2F3A6774 && *s.add(5) != b'/' {
+
+        if ((s as *const u32).read_unaligned() | 0x00002020) != 0x2F3A6774 && *s.add(5) != 0x2f {
             return None;
         }
 
@@ -295,19 +312,19 @@ impl<'a> ParseTgLink<'a> {
 
         match *sub_ptr | 0x20 {
             // "tg://user?id={num}"
-            b'u' if sub_len >= 8 && self.is_tg_user(sub_ptr) => {
+            0x75 if sub_len >= 8 && self.is_tg_user(sub_ptr) => {
                 let (v, n) = self.num(sub_ptr.add(8))?;
                 self.ptr = n;
                 Some(LinkKind::Id(v))
             }
             // "tg://resolve?domain={username}"
-            b'r' if sub_len >= 15 && self.is_resolve_domain(sub_ptr) => {
+            0x72 if sub_len >= 15 && self.is_resolve_domain(sub_ptr) => {
                 let (u, n) = self.str(sub_ptr.add(15))?;
                 self.ptr = n;
                 Some(LinkKind::Username(u))
             }
             // "tg://openmessage?user_id={num}"
-            b'o' if sub_len >= 20 && self.is_open_message(sub_ptr) => {
+            0x6f if sub_len >= 20 && self.is_open_message(sub_ptr) => {
                 let (v, n) = self.num(sub_ptr.add(20))?;
                 self.ptr = n;
                 Some(LinkKind::Id(v))
@@ -331,36 +348,45 @@ impl<'a> Iterator for ParseTgLink<'a> {
                         let s = self.ptr;
                         let next_s = s.add(1);
 
-                        if next_s < self.end && *next_s == b'_' {
-                            if let Some((val, next_ptr)) = self.chat_id(next_s.add(1)) {
-                                self.ptr = next_ptr;
-                                return Some(LinkKind::ChatId(val));
+                        match *next_s | 0x20 {
+                            0x7f | 0x2d => {
+                                if let Some((val, next_ptr)) = self.chat_id(next_s.add(1)) {
+                                    self.ptr = next_ptr;
+                                    return Some(LinkKind::ChatId(val));
+                                }
                             }
-                            self.ptr = s.add(1);
-                            continue;
+                            0x30..=0x39 => {
+                                if let Some((val, next_ptr)) = self.num(next_s) {
+                                    self.ptr = next_ptr;
+                                    return Some(LinkKind::Id(val));
+                                }
+                            }
+                            0x61..=0x7a => {
+                                if let Some((val, next_ptr)) = self.str(next_s) {
+                                    self.ptr = next_ptr;
+                                    return Some(LinkKind::Username(val));
+                                }
+                            }
+                            _ => {}
                         }
 
-                        if let Some((val, next_ptr)) = self.num(next_s) {
-                            self.ptr = next_ptr;
-                            return Some(LinkKind::Id(val));
-                        }
-                        if let Some((val, next_ptr)) = self.str(next_s) {
-                            self.ptr = next_ptr;
-                            return Some(LinkKind::Username(val));
-                        }
                         self.ptr = s.add(1);
                     }
                     0x74 | 0x54 => {
                         let s = self.ptr;
+
                         if let Some(link) = self.t_me(s) {
                             return Some(link);
                         }
+
                         if let Some(link) = self.tg_protocol(s) {
                             return Some(link);
                         }
+
                         if let Some(link) = self.telegram_domain(s) {
                             return Some(link);
                         }
+
                         self.ptr = s.add(1);
                     }
                     _ => {
