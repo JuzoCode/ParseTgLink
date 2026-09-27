@@ -24,8 +24,8 @@
 | t.me/@id12345 | LinkKind::Id(12345) |
 | telegram.me/username | LinkKind::Username("username") |
 | telegram.me/12345 | LinkKind::Id(12345) |
-| telegram.me/_12345 | LinkKind::ChatId(12345) |
-| telegram.me/-12345 | LinkKind::ChatId(12345) |
+| telegram.me/_12345 | LinkKind::ChatId(-12345) |
+| telegram.me/-12345 | LinkKind::ChatId(-12345) |
 | telegram.me/@id12345 | LinkKind::Id(12345) |
 | telegram.dog/username | LinkKind::Username("username") |
 | telegram.dog/12345 | LinkKind::Id(12345) |
