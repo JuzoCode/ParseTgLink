@@ -13,6 +13,8 @@
 
 | Формат | Результат |
 | :--- | :--- |
+| username.t.me | LinkKind::Username("username") |
+| @username | LinkKind::Username("username") |
 | @username | LinkKind::Username("username") |
 | @12345 | LinkKind::Id(12345) |
 | @_12345 | LinkKind::ChatId(-12345) |
@@ -24,8 +26,8 @@
 | t.me/@id12345 | LinkKind::Id(12345) |
 | telegram.me/username | LinkKind::Username("username") |
 | telegram.me/12345 | LinkKind::Id(12345) |
-| telegram.me/_12345 | LinkKind::ChatId(12345) |
-| telegram.me/-12345 | LinkKind::ChatId(12345) |
+| telegram.me/_12345 | LinkKind::ChatId(-12345) |
+| telegram.me/-12345 | LinkKind::ChatId(-12345) |
 | telegram.me/@id12345 | LinkKind::Id(12345) |
 | telegram.dog/username | LinkKind::Username("username") |
 | telegram.dog/12345 | LinkKind::Id(12345) |
@@ -43,7 +45,7 @@ use crate::...::{ParseTgLink, LinkKind};
 
 fn main() {
     // регистронезависимость
-    let text = "Contact @JuzoCode or visit T.Me/JuZo_OtVeTiT. Hello (Гуся)[http://t.me/shuseks]";
+    let text = "Contact @JuzoCode or visit https://T.Me/JuZo_OtVeTiT. Hello (Гуся)[http://shuseks.t.me]";
 
     // Поиск всех ссылок (итератор)
     for link in ParseTgLink::all(text) {

@@ -1,6 +1,14 @@
 [package]
-name = "parse_link"
+name = "tglink"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
+
+[dev-dependencies]
+criterion = "0.5"
+regex = "1"
+
+[[bench]]
+name = "benchmark"
+harness = false
