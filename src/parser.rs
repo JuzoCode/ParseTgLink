@@ -8,6 +8,7 @@ pub enum LinkKind<'a> {
     ChatId(i64),
     Username(&'a str),
 }
+
 #[inline(always)]
 fn is_letter(b: u8) -> bool {
     (b | 0x20).wrapping_sub(b'a') < 26
@@ -234,15 +235,12 @@ impl<'a> ParseTgLink<'a> {
 
         // RU:  `b < floor` — username пересёкся бы с предыдущей ссылкой.
         // ENG: `b < floor` — the username would overlap the previous link.
-        if len == 0 || !is_letter(*b) || b < self.floor {
+        if len == 0
+            || !is_letter(*b)
+            || b < self.floor
+            || (b > self.start && CLASS[*b.sub(1) as usize] != 0)
+        {
             return None;
-        }
-
-        if b > self.start {
-            let p = *b.sub(1);
-            if p == b'.' || p == b'-' {
-                return None;
-            }
         }
 
         let after = s.add(4);
@@ -252,13 +250,6 @@ impl<'a> ParseTgLink<'a> {
             // "hello.t.mex", "hello.t.me-x"
             if CLASS[c as usize] != 0 {
                 return None;
-            }
-
-            if c == b'.' {
-                let n = after.add(1);
-                if n < self.end && CLASS[*n as usize] & 2 != 0 {
-                    return None;
-                }
             }
         }
 
@@ -309,7 +300,7 @@ impl<'a> ParseTgLink<'a> {
         }
 
         // "xtelegram.me/..." — не наша ссылка
-        if s > self.start && CLASS[*s.sub(1) as usize] != 0 {
+        if s > self.start && CLASS[*s.sub(1) as usize] & 1 != 0 {
             return None;
         }
 
@@ -382,6 +373,8 @@ static CLASS: [u8; 256] = {
             t[i] = 3;
         } else if b == b'-' {
             t[i] = 1;
+        } else if b == b'.' {
+            t[i] = 4;
         }
         i += 1;
     }
@@ -395,6 +388,7 @@ const unsafe fn rd16(p: *const u8) -> u16 {
             .read_unaligned(),
     )
 }
+
 #[inline(always)]
 const unsafe fn rd32(p: *const u8) -> u32 {
     u32::from_le(
@@ -402,6 +396,7 @@ const unsafe fn rd32(p: *const u8) -> u32 {
             .read_unaligned(),
     )
 }
+
 #[inline(always)]
 const unsafe fn rd64(p: *const u8) -> u64 {
     u64::from_le(
@@ -428,10 +423,10 @@ mod tests {
         assert_eq!(one("juzocode.t.me"), Some(Username("juzocode")));
         assert_eq!(one("meow://juzocode.t.me/123"), Some(Username("juzocode")));
         assert_eq!(one("Hello.T.ME!"), Some(Username("Hello")));
-        assert_eq!(one("see hello.t.me."), Some(Username("hello")));
         assert_eq!(one("user_1.t.me"), Some(Username("user_1")));
+        assert_eq!(one("see hello.t.me."), None);
     }
-    
+   
     #[test]
     fn subdomain_invalid() {
         assert_eq!(one("123456.t.me"), None);
@@ -443,6 +438,9 @@ mod tests {
         assert_eq!(one("hello.t.mex"), None);
         assert_eq!(one("hello.t.me.evil.com"), None);
         assert_eq!(one("cat.me/foo"), None);
+        assert_eq!(one("-juzocode.t.me"), None);
+        assert_eq!(one(".juzocode.t.me"), None);
+        assert_eq!(one("juzo-code.t.me"), None);
     }
 
     #[test]
@@ -471,6 +469,7 @@ mod tests {
         assert_eq!(one("t.me/"), None);
         assert_eq!(one("t.me"), None);
         assert_eq!(one("t.me/99999999999999999999999"), None);
+        assert_eq!(one("t.me/-juzocode"), None);
     }
 
     #[test]
@@ -519,6 +518,49 @@ mod tests {
         assert_eq!(one("@392851555"), Some(Id(392851555)));
         assert_eq!(one("@-100"), Some(ChatId(-100)));
         assert_eq!(one("abc @"), None);
+        assert_eq!(one("@-juzocode"), None);
+    }
+
+    #[test]
+    fn case_insensitive() {
+        // t.me
+        assert_eq!(one("T.ME/JuzoCode"), Some(Username("JuzoCode")));
+        assert_eq!(one("T.Me/JUZOCODE"), Some(Username("JUZOCODE")));
+        assert_eq!(one("HTTPS://T.ME/JuzoCode"), Some(Username("JuzoCode")));
+        assert_eq!(one("t.ME/392851555"), Some(Id(392851555)));
+        assert_eq!(one("T.me/@ID42"), Some(Id(42)));
+
+        // username.t.me
+        assert_eq!(one("JUZOCODE.T.ME"), Some(Username("JUZOCODE")));
+        assert_eq!(one("JuzoCode.t.Me"), Some(Username("JuzoCode")));
+        assert_eq!(one("Juzo_Code1.T.Me"), Some(Username("Juzo_Code1")));
+
+        // telegram.me / telegram.dog
+        assert_eq!(one("TELEGRAM.ME/JuzoCode"), Some(Username("JuzoCode")));
+        assert_eq!(one("TeLeGrAm.Me/JuzoCode"), Some(Username("JuzoCode")));
+        assert_eq!(one("TELEGRAM.DOG/JuzoCode"), Some(Username("JuzoCode")));
+
+        // tg://
+        assert_eq!(one("TG://USER?ID=42"), Some(Id(42)));
+        assert_eq!(
+            one("TG://RESOLVE?DOMAIN=JuzoCode"),
+            Some(Username("JuzoCode"))
+        );
+        assert_eq!(one("TG://OPENMESSAGE?USER_ID=7"), Some(Id(7)));
+    }
+
+    #[test]
+    fn multiple_links() {
+        let mut it = ParseTgLink::all("@durov, t.me/JuzoCode, tg://user?id=1 and hello.t.me");
+        assert_eq!(it.next(), Some(Username("durov")));
+        assert_eq!(it.next(), Some(Username("JuzoCode")));
+        assert_eq!(it.next(), Some(Id(1)));
+        assert_eq!(it.next(), Some(Username("hello")));
+        assert_eq!(it.next(), None);
+
+        let mut it = ParseTgLink::all("hello.t.me/JuzoCode");
+        assert_eq!(it.next(), Some(Username("hello")));
+        assert_eq!(it.next(), None);
     }
 
     #[test]
